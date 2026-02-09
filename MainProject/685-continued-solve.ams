@@ -1,6 +1,6 @@
 ## ams_version=1.0
 
-Model Main_template {
+Model Main_Implementing_Continued_Solves {
 	Parameter MaxJobs {
 		Text: "Number of elements in de set Jobs";
 		Range: integer;
