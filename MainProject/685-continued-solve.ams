@@ -102,24 +102,60 @@ Model Main_Implementing_Continued_Solves {
 	}
 	Procedure MainInitialization {
 		Body: {
-			ProfilerStart();
+			!ProfilerStart();
 			
-			MaxJobs      := 16;
-			MaxMachines  := 22;
+			MaxJobs      := 15;
+			MaxMachines  := 20;
 			
 			GenerateData;
 		}
 	}
 	Procedure MainExecution {
 		Body: {
+			! 1. Generate the GMP instance from the symbolic Mathematical Program
 			myGMP := GMP::Instance::Generate( FlowShopModel );
+			! 2. Tight optimality tolerance and time limit
+			GMP::Instance::SetOptionValue( myGMP, "MIP Relative Optimality Tolerance", 0.01 );
+			GMP::Instance::SetOptionValue( myGMP, "Time Limit", 20 );
+			! 3. Execute the initial solve
 			GMP::Instance::Solve( myGMP );
-			
+			! 4. Check if the solver stopped due to a time or resource limit
+			if GMP::Solution::GetSolverStatus( myGMP, 1 ) = 'ResourceInterrupt' then
+				! 5. Relaxed optimality tolerance and time limit
+				GMP::Instance::SetOptionValue( myGMP, "MIP Relative Optimality Tolerance", 0.04 );
+				GMP::Instance::SetOptionValue( myGMP, "Time Limit", 600 );
+			        ! 6. Solve again: the solver resumes the previous search
+				GMP::Instance::Solve( myGMP );
+			endif;
+		}
+	}
+	Procedure pr_testContinuedSolve {
+		Body: {
+			myGMP := GMP::Instance::Generate( FlowShopModel );
+			GMP::Instance::SetOptionValue( myGMP, "MIP Relative Optimality Tolerance", 0.01 );
+			GMP::Instance::SetOptionValue( myGMP, "Time Limit", 20 );
+			GMP::Instance::Solve( myGMP );
 			if GMP::Solution::GetSolverStatus( myGMP, 1 ) = 'ResourceInterrupt' then
 				GMP::Instance::SetOptionValue( myGMP, "MIP Relative Optimality Tolerance", 0.04 );
 				GMP::Instance::SetOptionValue( myGMP, "Time Limit", 600 );
 				GMP::Instance::Solve( myGMP );
 			endif;
+		}
+	}
+	Procedure pr_testTwoSolves {
+		Body: {
+			Solve FlowShopModel 
+				where MIP_Relative_Optimality_Tolerance := 0.01, Time_Limit := 20 ;
+			if FlowShopModel.SolverStatus = 'ResourceInterrupt' then
+				Solve FlowShopModel 
+					where MIP_Relative_Optimality_Tolerance := 0.04, Time_Limit := 600 ;
+			endif ;
+		}
+	}
+	Procedure pr_testSingleSolve {
+		Body: {
+			Solve FlowShopModel 
+				where MIP_Relative_Optimality_Tolerance := 0.04, Time_Limit := 600 ;
 		}
 	}
 	Procedure MainTermination {
